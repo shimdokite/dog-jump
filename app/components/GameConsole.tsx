@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import GameWindow from "./GameWindow";
 
 export default function GameConsole() {
   const [activeKey, setActiveKey] = useState({
@@ -57,7 +58,7 @@ export default function GameConsole() {
         <button
           className={`w-[45px] h-[45px] bg-[#2B2A2A] rounded-lg text-white font-semibold select-none transition-all flex items-center justify-center ${
             activeKey.left
-              ? "translate-y-[3px] shadow-[0_1px_0_#1E1E1E]"
+              ? "translate-y-[3px] shadow-[0_1px_0_#161616]"
               : "shadow-[0_4px_0_#1E1E1E]"
           }`}
         >
@@ -67,7 +68,7 @@ export default function GameConsole() {
         <button
           className={`w-[45px] h-[45px] bg-[#2B2A2A] rounded-lg text-white font-semibold select-none transition-all flex items-center justify-center ${
             activeKey.right
-              ? "translate-y-[3px] shadow-[0_1px_0_#1E1E1E]"
+              ? "translate-y-[3px] shadow-[0_1px_0_#161616]"
               : "shadow-[0_4px_0_#1E1E1E]"
           }`}
         >
@@ -77,14 +78,17 @@ export default function GameConsole() {
 
       <div className="flex flex-col justify-center items-center">
         <div className="absolute top-53 text-2xl">...</div>
-        <div className="w-[417px] h-[292px] bg-[#6F6F6F] rounded-md"></div>
+
+        <div className="w-[417px] h-[292px] bg-[#6F6F6F] rounded-md relative">
+          <GameWindow />
+        </div>
       </div>
 
       <div className="w-1/3 flex justify-center items-center">
         <button
           className={`w-[77px] h-[77px] rounded-full bg-[#810C46] text-white font-semibold select-none transition-all flex items-center justify-center ${
             activeKey.jump
-              ? "translate-y-[3px] shadow-[0_1px_0_#5F0833]"
+              ? "translate-y-[3px] shadow-[0_1px_0_#480627]"
               : "shadow-[0_4px_0_#5F0833]"
           }`}
         >
