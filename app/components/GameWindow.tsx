@@ -331,8 +331,10 @@ export default function GameWindow() {
   };
 
   return (
-    <div className={`flex justify-center items-center ${bitcount.className}`}>
-      <div className="w-[417px] h-[292px] absolute top-[0.2px]">
+    <div
+      className={`flex justify-center items-center h-full ${bitcount.className}`}
+    >
+      <div className="max-sm:w-[257px] w-[417px] h-[292px] absolute top-[0.2px] mx-3">
         {!gameStarted && !gameOver && <GameStart start={startGame} />}
         {gameOver && (
           <GameOver time={displayTime} score={score} start={startGame} />
@@ -343,7 +345,7 @@ export default function GameWindow() {
         ref={canvasRef}
         width={408}
         height={284}
-        className="rounded-sm my-1"
+        className="rounded-sm my-1 w-full max-w-[408px] max-sm:h-[292px]"
       />
     </div>
   );
