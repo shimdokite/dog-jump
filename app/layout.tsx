@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "dog-jump",
+  title: "dog jump",
   description: "dog jump game",
 };
 
