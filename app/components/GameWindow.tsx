@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Bitcount_Grid_Single } from "next/font/google";
-import GameStart from "./GameStart";
-import GameOver from "./GameOver";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
+import GameStart from "./GameStart";
+import GameOver from "./GameOver";
+import useIsMobile from "../hooks/useIsMobile";
 
 interface Obstacle {
   x: number;
@@ -18,6 +19,7 @@ const bitcount = Bitcount_Grid_Single({ weight: "400", subsets: ["latin"] });
 export default function GameWindow() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const secondsRef = useRef(0);
+  const isMobile = useIsMobile();
   const [displayTime, setDisplayTime] = useState("00:00");
   const [gameOver, setGameOver] = useState(false);
   const [score, setScore] = useState(0);
@@ -32,12 +34,12 @@ export default function GameWindow() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    let animationId = 0;
+    const keys: { [key: string]: boolean } = {};
     const dog = {
       x: 100,
       y: 300,
-      width: 50,
-      height: 50,
+      width: isMobile ? 60 : 50,
+      height: isMobile ? 60 : 50,
       velocityY: 0,
       velocityX: 0,
       isJumping: false,
@@ -55,8 +57,7 @@ export default function GameWindow() {
     let obstacleSpeed = 3;
     let frameCount = 0;
     let localScore = 0;
-
-    const keys: { [key: string]: boolean } = {};
+    let animationId = 0;
 
     // 강아지
     const frames: HTMLImageElement[] = [];
@@ -73,7 +74,6 @@ export default function GameWindow() {
       ctx.save();
       ctx.translate(dog.x + dog.width / 2, dog.y + dog.height / 2);
 
-      // 방향 반전
       if (dog.direction === -1) ctx.scale(-1, 1);
 
       ctx.drawImage(
@@ -86,18 +86,46 @@ export default function GameWindow() {
 
       ctx.restore();
 
-      // 애니메이션 프레임 업데이트
       dog.frameCounter++;
       if (dog.frameCounter % 4 === 0) dog.frame++;
     };
 
+    // 시간 표시
+    let timer = null;
+
+    const drawTime = () => {
+      const time = dayjs
+        .duration(secondsRef.current, "seconds")
+        .format("mm:ss");
+
+      ctx.fillStyle = "#000";
+      ctx.font = `18px ${bitcount.style.fontFamily}`;
+      ctx.fillText(time, 20, 30);
+    };
+
+    if (gameStarted && !gameOver) {
+      secondsRef.current = 0;
+      setDisplayTime("00:00");
+
+      timer = window.setInterval(() => {
+        secondsRef.current++;
+
+        const time = dayjs
+          .duration(secondsRef.current, "seconds")
+          .format("mm:ss");
+        setDisplayTime(time);
+      }, 1000);
+    }
+
     // 방해물 생성
     const createObstacle = () => {
-      const height = 30 + Math.random() * 40;
+      const height = 30 + Math.random() * (isMobile ? 30 : 40);
+      const width = 30 + Math.random() * (isMobile ? 45 : 30);
+
       obstacles.push({
         x: canvas.width,
         y: groundY - height,
-        width: 30 + Math.random() * 30,
+        width: width,
         height: height,
         passed: false,
       });
@@ -150,34 +178,6 @@ export default function GameWindow() {
       }
       return false;
     };
-
-    // 시간 표시
-
-    let timer = null;
-
-    const drawTime = () => {
-      const time = dayjs
-        .duration(secondsRef.current, "seconds")
-        .format("mm:ss");
-
-      ctx.fillStyle = "#000";
-      ctx.font = `16px ${bitcount.style.fontFamily}`;
-      ctx.fillText(time, 20, 30);
-    };
-
-    if (gameStarted && !gameOver) {
-      secondsRef.current = 0;
-      setDisplayTime("00:00");
-
-      timer = window.setInterval(() => {
-        secondsRef.current++;
-
-        const time = dayjs
-          .duration(secondsRef.current, "seconds")
-          .format("mm:ss");
-        setDisplayTime(time);
-      }, 1000);
-    }
 
     // 게임 루프
     const gameLoop = () => {
@@ -279,7 +279,7 @@ export default function GameWindow() {
 
       // 점수 표시
       ctx.fillStyle = "#000";
-      ctx.font = `16px ${bitcount.style.fontFamily}`;
+      ctx.font = `18px ${bitcount.style.fontFamily}`;
 
       const scoreLength = `${localScore}`.length;
       let area = 375;
@@ -317,12 +317,9 @@ export default function GameWindow() {
       window.removeEventListener("keyup", handleKeyUp);
 
       if (timer) clearInterval(timer);
-
-      if (animationId) {
-        cancelAnimationFrame(animationId);
-      }
+      if (animationId) cancelAnimationFrame(animationId);
     };
-  }, [gameOver, gameStarted]);
+  }, [gameOver, gameStarted, isMobile]);
 
   const startGame = () => {
     setGameStarted(true);
