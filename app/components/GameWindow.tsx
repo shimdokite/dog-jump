@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { Bitcount_Grid_Single } from "next/font/google";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
 import GameStart from "./GameStart";
@@ -14,11 +13,18 @@ interface Obstacle {
   passed: boolean;
 }
 
-const bitcount = Bitcount_Grid_Single({ weight: "400", subsets: ["latin"] });
+interface GameWindow {
+  activeKey: {
+    left: boolean;
+    right: boolean;
+    jump: boolean;
+  };
+}
 
-export default function GameWindow() {
+export default function GameWindow({ activeKey }: GameWindow) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const secondsRef = useRef(0);
+  const keyRef = useRef(activeKey);
   const isMobile = useIsMobile();
   const [displayTime, setDisplayTime] = useState("00:00");
   const [gameOver, setGameOver] = useState(false);
@@ -28,13 +34,16 @@ export default function GameWindow() {
   dayjs.extend(duration);
 
   useEffect(() => {
+    keyRef.current = activeKey;
+  }, [activeKey]);
+
+  useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const keys: { [key: string]: boolean } = {};
     const dog = {
       x: 100,
       y: 300,
@@ -99,7 +108,7 @@ export default function GameWindow() {
         .format("mm:ss");
 
       ctx.fillStyle = "#000";
-      ctx.font = `18px ${bitcount.style.fontFamily}`;
+      ctx.font = `18px 'Bitcount Grid Single'`;
       ctx.fillText(time, 20, 30);
     };
 
@@ -199,11 +208,13 @@ export default function GameWindow() {
         ctx.fillRect(i, groundY, 10, 3);
       }
 
+      const keys = keyRef.current;
+
       // 좌우 이동
-      if (keys["ArrowLeft"]) {
+      if (keys.left) {
         dog.velocityX = -moveSpeed;
         dog.direction = -1;
-      } else if (keys["ArrowRight"]) {
+      } else if (keys.right) {
         dog.velocityX = moveSpeed;
         dog.direction = 1;
       } else {
@@ -211,7 +222,7 @@ export default function GameWindow() {
       }
 
       // 점프
-      if (keys[" "] && !dog.isJumping) {
+      if (keys.jump && !dog.isJumping) {
         dog.velocityY = jumpStrength;
         dog.isJumping = true;
       }
@@ -279,7 +290,7 @@ export default function GameWindow() {
 
       // 점수 표시
       ctx.fillStyle = "#000";
-      ctx.font = `18px ${bitcount.style.fontFamily}`;
+      ctx.font = `18px 'Bitcount Grid Single'`;
 
       const scoreLength = `${localScore}`.length;
       let area = 375;
@@ -291,31 +302,9 @@ export default function GameWindow() {
       animationId = requestAnimationFrame(gameLoop);
     };
 
-    // 키보드 이벤트
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === " ") {
-        e.preventDefault();
-        keys[e.key] = true;
-      }
-    };
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === " ") {
-        e.preventDefault();
-        keys[e.key] = false;
-      }
-    };
-
-    if (gameStarted && !gameOver) {
-      window.addEventListener("keydown", handleKeyDown);
-      window.addEventListener("keyup", handleKeyUp);
-      gameLoop();
-    }
+    if (gameStarted && !gameOver) gameLoop();
 
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
-
       if (timer) clearInterval(timer);
       if (animationId) cancelAnimationFrame(animationId);
     };
@@ -328,9 +317,7 @@ export default function GameWindow() {
   };
 
   return (
-    <div
-      className={`flex justify-center items-center h-full ${bitcount.className}`}
-    >
+    <div className={`flex justify-center items-center h-full font-bitcount`}>
       <div className="max-sm:w-[257px] w-[417px] h-[292px] absolute top-[0.2px] mx-3">
         {!gameStarted && !gameOver && <GameStart start={startGame} />}
         {gameOver && (
