@@ -19,6 +19,17 @@
   }
 }
 
+@font-face {
+  font-family: "Bitcount";
+  font-weight: 400;
+  font-style: normal;
+  src: url("/fonts/BitcountGridSingle.ttf") format("truetype");
+}
+
+@theme {
+  --font-bitcount: "Bitcount";
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
@@ -28,4 +39,8 @@ body {
 button:focus {
   outline: none;
   box-shadow: none;
+}
+
+button {
+  touch-action: none;
 }
