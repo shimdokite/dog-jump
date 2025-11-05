@@ -69,9 +69,9 @@ export default function GameConsole() {
       {!isMobile && (
         <div className="w-1/3 flex justify-center items-center gap-6">
           <button
-            onTouchStart={(e) => handleDown(e, "right")}
-            onTouchEnd={(e) => handleUp(e, "right")}
-            onTouchMove={(e) => handleUp(e, "right")}
+            onTouchStart={(e) => handleDown(e, "left")}
+            onTouchEnd={(e) => handleUp(e, "left")}
+            onTouchMove={(e) => handleUp(e, "left")}
             onMouseDown={(e) => handleDown(e, "left")}
             onMouseUp={(e) => handleUp(e, "left")}
             onMouseLeave={(e) => handleUp(e, "left")}
