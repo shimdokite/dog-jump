@@ -97,7 +97,7 @@ export default function GameConsole() {
       )}
 
       <div className="flex flex-col justify-center items-center">
-        <div className="absolute max-sm:top-41 top-53 text-2xl">...</div>
+        <div className="absolute max-sm:top-39 top-53 text-2xl">...</div>
 
         <div className="max-sm:w-[257px] w-[417px] h-[292px] rounded-md relative">
           <GameWindow activeKey={activeKey} />
