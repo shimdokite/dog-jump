@@ -47,8 +47,8 @@ export default function GameWindow({ activeKey }: GameWindow) {
     const dog = {
       x: 100,
       y: 300,
-      width: isMobile ? 60 : 50,
-      height: isMobile ? 60 : 50,
+      width: isMobile ? 55 : 50,
+      height: isMobile ? 55 : 50,
       velocityY: 0,
       velocityX: 0,
       isJumping: false,
@@ -108,7 +108,7 @@ export default function GameWindow({ activeKey }: GameWindow) {
         .format("mm:ss");
 
       ctx.fillStyle = "#000";
-      ctx.font = `18px 'Bitcount Grid Single'`;
+      ctx.font = `18px 'Bitcount'`;
       ctx.fillText(time, 20, 30);
     };
 
@@ -128,8 +128,8 @@ export default function GameWindow({ activeKey }: GameWindow) {
 
     // 방해물 생성
     const createObstacle = () => {
-      const height = 30 + Math.random() * (isMobile ? 30 : 40);
-      const width = 30 + Math.random() * (isMobile ? 45 : 30);
+      const width = 30 + Math.random() * (isMobile ? 50 : 30);
+      const height = 30 + Math.random() * (isMobile ? 35 : 40);
 
       obstacles.push({
         x: canvas.width,
@@ -290,7 +290,7 @@ export default function GameWindow({ activeKey }: GameWindow) {
 
       // 점수 표시
       ctx.fillStyle = "#000";
-      ctx.font = `18px 'Bitcount Grid Single'`;
+      ctx.font = `18px 'Bitcount'`;
 
       const scoreLength = `${localScore}`.length;
       let area = 375;
