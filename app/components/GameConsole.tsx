@@ -69,6 +69,9 @@ export default function GameConsole() {
       {!isMobile && (
         <div className="w-1/3 flex justify-center items-center gap-6">
           <button
+            onTouchStart={(e) => handleDown(e, "right")}
+            onTouchEnd={(e) => handleUp(e, "right")}
+            onTouchMove={(e) => handleUp(e, "right")}
             onMouseDown={(e) => handleDown(e, "left")}
             onMouseUp={(e) => handleUp(e, "left")}
             onMouseLeave={(e) => handleUp(e, "left")}
@@ -82,6 +85,9 @@ export default function GameConsole() {
           </button>
 
           <button
+            onTouchStart={(e) => handleDown(e, "right")}
+            onTouchEnd={(e) => handleUp(e, "right")}
+            onTouchMove={(e) => handleUp(e, "right")}
             onMouseDown={(e) => handleDown(e, "right")}
             onMouseUp={(e) => handleUp(e, "right")}
             onMouseLeave={(e) => handleUp(e, "right")}
@@ -99,7 +105,7 @@ export default function GameConsole() {
       <div className="flex flex-col justify-center items-center">
         <div className="absolute max-sm:top-39 top-53 text-2xl">...</div>
 
-        <div className="max-sm:w-[257px] w-[417px] h-[292px] rounded-md relative">
+        <div className="max-sm:w-[257px] max-sm:h-[292px] w-[417px] h-[285px] rounded-md relative">
           <GameWindow activeKey={activeKey} />
         </div>
       </div>
@@ -161,6 +167,9 @@ export default function GameConsole() {
       ) : (
         <div className="w-1/3 flex justify-center items-center">
           <button
+            onTouchStart={(e) => handleDown(e, "jump")}
+            onTouchEnd={(e) => handleUp(e, "jump")}
+            onTouchMove={(e) => handleUp(e, "jump")}
             onMouseDown={(e) => handleDown(e, "jump")}
             onMouseUp={(e) => handleUp(e, "jump")}
             onMouseLeave={(e) => handleUp(e, "jump")}

@@ -318,10 +318,15 @@ export default function GameWindow({ activeKey }: GameWindow) {
 
   return (
     <div className={`flex justify-center items-center h-full font-bitcount`}>
-      <div className="max-sm:w-[257px] w-[417px] h-[292px] absolute top-[0.2px] mx-3">
+      <div className="max-sm:w-[257px] w-[410px] h-full absolute top-[0.2px] mx-3">
         {!gameStarted && !gameOver && <GameStart start={startGame} />}
         {gameOver && (
-          <GameOver time={displayTime} score={score} start={startGame} />
+          <GameOver
+            time={displayTime}
+            score={score}
+            gameOver={gameOver}
+            start={startGame}
+          />
         )}
       </div>
 
