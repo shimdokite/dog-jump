@@ -1,14 +1,37 @@
-import { useEffect, useState } from "react";
+import { ChangeEvent, useEffect, useState } from "react";
 
 interface GameOver {
   time: string;
   score: number;
   gameOver: boolean;
   start: () => void;
+  setLevelType: (type: string) => void;
+  setIsLevelChoice: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-export default function GameOver({ time, score, gameOver, start }: GameOver) {
+export default function GameOver({
+  time,
+  score,
+  gameOver,
+  start,
+  setLevelType,
+  setIsLevelChoice,
+}: GameOver) {
   const [showStart, setShowStart] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [isInitialGame, setIsInitalGame] = useState(true); // TODO: 추후 유저 db 값으로 업데이트 예정
+
+  const handleLevelType = (e: ChangeEvent<HTMLInputElement>) => {
+    const { name, checked } = e.target;
+
+    if (checked) {
+      setLevelType(name);
+      setIsLevelChoice(true);
+    } else {
+      setLevelType(name);
+      setIsLevelChoice(false);
+    }
+  };
 
   useEffect(() => {
     if (gameOver) {
@@ -31,6 +54,29 @@ export default function GameOver({ time, score, gameOver, start }: GameOver) {
         <div>Time: {time}</div>
         <div className="w-full mr-4">Score: {score}</div>
       </div>
+
+      {isInitialGame && (
+        <div className="flex flex-col justify-center items-center">
+          <h2 className="">Choose Level</h2>
+
+          <div className="flex justify-center items-center gap-2">
+            <input
+              name="easier"
+              type="checkbox"
+              onChange={handleLevelType}
+              className="mr-2 size-5 cursor-pointer appearance-none rounded-[4px] border border-[#292d32] outline-none checked:relative checked:border-[#33cccc] checked:bg-[#33cccc] checked:before:absolute checked:before:left-[3.1px] checked:before:text-sm checked:before:text-white checked:before:content-['✔'] checked:shadow-[0_0_20px_#33cccc]"
+            />
+            Easier
+            <input
+              name="harder"
+              type="checkbox"
+              onChange={handleLevelType}
+              className="mr-2 size-5 cursor-pointer appearance-none rounded-[4px] border border-[#292d32] outline-none checked:relative checked:border-[#33cccc] checked:bg-[#33cccc] checked:before:absolute checked:before:left-[3.1px] checked:before:text-sm checked:before:text-white  checked:before:content-['✔'] checked:shadow-[0_0_20px_#33cccc]"
+            />
+            Harder
+          </div>
+        </div>
+      )}
 
       <button
         onClick={start}

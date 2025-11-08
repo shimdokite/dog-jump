@@ -4,6 +4,7 @@ import duration from "dayjs/plugin/duration";
 import GameStart from "./GameStart";
 import GameOver from "./GameOver";
 import useIsMobile from "../hooks/useIsMobile";
+import useGemini from "../hooks/mutations/useGemini";
 
 interface Obstacle {
   x: number;
@@ -26,10 +27,14 @@ export default function GameWindow({ activeKey }: GameWindow) {
   const secondsRef = useRef(0);
   const keyRef = useRef(activeKey);
   const isMobile = useIsMobile();
+  const { generateObstacles, speed } = useGemini();
   const [displayTime, setDisplayTime] = useState("00:00");
   const [gameOver, setGameOver] = useState(false);
   const [score, setScore] = useState(0);
   const [gameStarted, setGameStarted] = useState(false);
+  const [isLevelChoice, setIsLevelChoice] = useState(false);
+  const [levelType, setLevelType] = useState("");
+  const [currentSpeed, setCurrentSpeed] = useState(0);
 
   dayjs.extend(duration);
 
@@ -142,6 +147,9 @@ export default function GameWindow({ activeKey }: GameWindow) {
 
     // 초기 장애물 생성
     createObstacle();
+
+    // 초기 난이도
+    setCurrentSpeed(obstacleSpeed);
 
     const drawObstacles = () => {
       ctx.fillStyle = "#8B4513";
@@ -272,8 +280,8 @@ export default function GameWindow({ activeKey }: GameWindow) {
       }
 
       // 난이도 증가
-      if (frameCount % 500 === 0) {
-        obstacleSpeed += 0.5;
+      if (isLevelChoice) {
+        obstacleSpeed = Number(speed);
       }
 
       // 충돌 체크
@@ -304,13 +312,31 @@ export default function GameWindow({ activeKey }: GameWindow) {
 
     if (gameStarted && !gameOver) gameLoop();
 
+    // TODO:
+    // 1. 최초 게임은 튜토리얼 느낌처럼 쉬운 난이도
+    // 2. 이후 게임부터는 난이도 조정 체크박스 추가
+    //    - 더 쉽게 or 더 어렵게
+    //    - 매번 물어보지만 처음 선택한 값으로 유지 > 변경할 수 있게
+    //    - 기존 난이도 데이터 필요 = 스피드 > gemini에게 질문(유저가 선택한 난이도 유형[쉬움/어려움], 이전 난이도 값[스피드 값], 플레이시간[timer], 점수[scroe])
+    // 3. AI 할당량 오버되면 기존 장애물 난이도 랜덤 조정 필요
+
     return () => {
       if (timer) clearInterval(timer);
       if (animationId) cancelAnimationFrame(animationId);
     };
-  }, [gameOver, gameStarted, isMobile]);
+  }, [gameOver, gameStarted, isMobile, isLevelChoice, speed]);
 
-  const startGame = () => {
+  const startGame = async () => {
+    if (isLevelChoice) {
+      const content = `현재 스피드가 ${currentSpeed} 이거야. 난이도 유형은 ${levelType} 이건데, 난이도 유형에 맞는 적절한 스피드 값만 반환해줘.`;
+      console.log(content);
+
+      await generateObstacles(content);
+      console.log("speed", speed);
+
+      setCurrentSpeed(Number(speed));
+    }
+
     setGameStarted(true);
     setGameOver(false);
     setScore(0);
@@ -326,6 +352,8 @@ export default function GameWindow({ activeKey }: GameWindow) {
             score={score}
             gameOver={gameOver}
             start={startGame}
+            setLevelType={setLevelType}
+            setIsLevelChoice={setIsLevelChoice}
           />
         )}
       </div>
