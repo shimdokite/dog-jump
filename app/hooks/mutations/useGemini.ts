@@ -3,22 +3,21 @@ import { useMutation } from "@tanstack/react-query";
 import { gemini } from "@/app/apis/gemini";
 
 export default function useGemini() {
-    const [speed, setSpeed] = useState('');
+    const [advice, setAdvice] = useState("");
 
     const { mutateAsync: runGemini } = useMutation({
       mutationFn: gemini,
       onSuccess: (data: { text: string }) => {
-        console.log('query success data > ', data.text);
-        setSpeed(data.text);
+        setAdvice(data.text);
       },
       onError: () => {
-        setSpeed('');
+        setAdvice("");
       }
     });
 
-    const generateObstacles = (content:string) => {
-        return runGemini(content);
+    const generateAdvice = (content: string) => {
+      return runGemini(content);
     };
 
-    return { generateObstacles, speed };
+    return { generateAdvice, advice };
 }

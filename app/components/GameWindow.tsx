@@ -27,14 +27,18 @@ export default function GameWindow({ activeKey }: GameWindow) {
   const secondsRef = useRef(0);
   const keyRef = useRef(activeKey);
   const isMobile = useIsMobile();
-  const { generateObstacles, speed } = useGemini();
+  const { generateAdvice, advice } = useGemini();
+  // TODO: advice를 게임을 restart 할 때 스르륵 3초 정도 보여줬다가 사라지게 하기
   const [displayTime, setDisplayTime] = useState("00:00");
   const [gameOver, setGameOver] = useState(false);
   const [score, setScore] = useState(0);
   const [gameStarted, setGameStarted] = useState(false);
-  const [isLevelChoice, setIsLevelChoice] = useState(false);
-  const [levelType, setLevelType] = useState("");
-  const [currentSpeed, setCurrentSpeed] = useState(0);
+  const [count, setCount] = useState(1);
+  const [isAdvice, setIsAdvice] = useState(false);
+  const [playLog, setPlayLog] = useState({
+    collisionTime: 0,
+    lastJumpTime: 0,
+  });
 
   dayjs.extend(duration);
 
@@ -148,9 +152,6 @@ export default function GameWindow({ activeKey }: GameWindow) {
     // 초기 장애물 생성
     createObstacle();
 
-    // 초기 난이도
-    setCurrentSpeed(obstacleSpeed);
-
     const drawObstacles = () => {
       ctx.fillStyle = "#8B4513";
       obstacles.forEach((obstacle) => {
@@ -181,6 +182,11 @@ export default function GameWindow({ activeKey }: GameWindow) {
       });
     };
 
+    // 난이도 증가
+    if (frameCount % 500 === 0) {
+      obstacleSpeed += 0.5;
+    }
+
     // 충돌 감지
     const checkCollision = () => {
       for (const obstacle of obstacles) {
@@ -190,9 +196,16 @@ export default function GameWindow({ activeKey }: GameWindow) {
           dog.y < obstacle.y + obstacle.height &&
           dog.y + dog.height > obstacle.y
         ) {
+          setPlayLog((prev) => ({
+            ...prev,
+            collisionTime: Date.now(),
+            speed: obstacleSpeed,
+          }));
+
           return true;
         }
       }
+
       return false;
     };
 
@@ -233,6 +246,11 @@ export default function GameWindow({ activeKey }: GameWindow) {
       if (keys.jump && !dog.isJumping) {
         dog.velocityY = jumpStrength;
         dog.isJumping = true;
+
+        setPlayLog((prev) => ({
+          ...prev,
+          lastJumpTime: Date.now(),
+        }));
       }
 
       // 중력 적용
@@ -279,15 +297,14 @@ export default function GameWindow({ activeKey }: GameWindow) {
         createObstacle();
       }
 
-      // 난이도 증가
-      if (isLevelChoice) {
-        obstacleSpeed = Number(speed);
-      }
-
       // 충돌 체크
       if (checkCollision()) {
         setGameOver(true);
         setGameStarted(false);
+        setCount(count + 1);
+
+        // TODO: 추후 서버로 로그 보내기
+        console.log("playLog\n", playLog);
         return;
       }
 
@@ -312,35 +329,45 @@ export default function GameWindow({ activeKey }: GameWindow) {
 
     if (gameStarted && !gameOver) gameLoop();
 
-    // TODO:
-    // 1. 최초 게임은 튜토리얼 느낌처럼 쉬운 난이도
-    // 2. 이후 게임부터는 난이도 조정 체크박스 추가
-    //    - 더 쉽게 or 더 어렵게
-    //    - 매번 물어보지만 처음 선택한 값으로 유지 > 변경할 수 있게
-    //    - 기존 난이도 데이터 필요 = 스피드 > gemini에게 질문(유저가 선택한 난이도 유형[쉬움/어려움], 이전 난이도 값[스피드 값], 플레이시간[timer], 점수[scroe])
-    // 3. AI 할당량 오버되면 기존 장애물 난이도 랜덤 조정 필요
-
     return () => {
       if (timer) clearInterval(timer);
       if (animationId) cancelAnimationFrame(animationId);
     };
-  }, [gameOver, gameStarted, isMobile, isLevelChoice, speed]);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameOver, gameStarted, isMobile, count]);
 
   const startGame = async () => {
-    if (isLevelChoice) {
-      const content = `현재 스피드가 ${currentSpeed} 이거야. 난이도 유형은 ${levelType} 이건데, 난이도 유형에 맞는 적절한 스피드 값만 반환해줘.`;
-      console.log(content);
+    // TODO: 서버 로그가 5개인지도 확인 필요
+    console.log("isAdvice", isAdvice);
+    console.log("count", count);
 
-      await generateObstacles(content);
-      console.log("speed", speed);
+    // if (count >= 5 && isAdvice) {
+    //   // TODO: 테스트 데이터
+    //   const content = `
+    //   아래는 최근 5게임 플레이의 요약 데이터야
 
-      setCurrentSpeed(Number(speed));
-    }
+    //   - 평균 점프 타이밍 오차: +94ms
+    //   - 게임 오버 이유:
+    //       늦은 점프: 3회
+    //       빠른 점프: 1회
+    //       점프 안함: 1회
+
+    //   이 데이터를 바탕으로 유저에게 전달할 코칭을 35자 미만으로 간단하게 부탁해.
+    //   `;
+
+    //   await generateAdvice(content);
+    // }
 
     setGameStarted(true);
     setGameOver(false);
     setScore(0);
   };
+
+  // 로그 확인용
+  useEffect(() => {
+    console.log("playLog updated:", playLog);
+  }, [playLog]);
 
   return (
     <div className={`flex justify-center items-center h-full font-bitcount`}>
@@ -350,10 +377,11 @@ export default function GameWindow({ activeKey }: GameWindow) {
           <GameOver
             time={displayTime}
             score={score}
+            count={count}
             gameOver={gameOver}
+            isAdvice={isAdvice}
             start={startGame}
-            setLevelType={setLevelType}
-            setIsLevelChoice={setIsLevelChoice}
+            setIsAdvice={setIsAdvice}
           />
         )}
       </div>
