@@ -200,6 +200,7 @@ export default function GameWindow({ activeKey }: GameWindow) {
             ...prev,
             collisionTime: Date.now(),
             speed: obstacleSpeed,
+            reason: "", // TODO: 게임 오버 이유, 실험을 통해 허용범위 구한 후 늦은/빠른/없는 점프인지 구해야함
           }));
 
           return true;
