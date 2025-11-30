@@ -10,7 +10,8 @@ export const gemini = async (content: string) => {
 
         return result.data;
     } catch (error) {
-        console.log("app/apis/gemini.ts error > ", error);
-        return '';
+        console.log(error);
+        
+        return error;
     }
 }

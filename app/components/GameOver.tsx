@@ -51,8 +51,8 @@ export default function GameOver({
         <div className="w-full mr-4">Score: {score}</div>
       </div>
 
-      {count >= 5 && (
-        <div className="flex flex-col justify-center items-center">
+      {count >= 1 && (
+        <div className="flex  justify-center items-center gap-3">
           <h2 className="">Do you want advice?</h2>
 
           <div className="flex justify-center items-center gap-2">
@@ -62,7 +62,6 @@ export default function GameOver({
               onChange={handleAdviceType}
               className="mr-2 size-5 cursor-pointer appearance-none rounded-[4px] border border-[#292d32] outline-none checked:relative checked:border-[#33cccc] checked:bg-[#33cccc] checked:before:absolute checked:before:left-[3.1px] checked:before:text-sm checked:before:text-white checked:before:content-['✔'] checked:shadow-[0_0_20px_#33cccc]"
             />
-            {isAdvice ? "YES" : "NO"}
           </div>
         </div>
       )}

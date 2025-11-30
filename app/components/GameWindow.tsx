@@ -6,6 +6,9 @@ import GameOver from "./GameOver";
 import useIsMobile from "../hooks/useIsMobile";
 import useGemini from "../hooks/mutations/useGemini";
 
+import { calculateDeathReasons } from "../utils/calculateDeathReasons";
+import { dummyLogs } from "../logs";
+
 interface Obstacle {
   x: number;
   y: number;
@@ -28,16 +31,17 @@ export default function GameWindow({ activeKey }: GameWindow) {
   const keyRef = useRef(activeKey);
   const isMobile = useIsMobile();
   const { generateAdvice, advice } = useGemini();
-  // TODO: advice를 게임을 restart 할 때 스르륵 3초 정도 보여줬다가 사라지게 하기
   const [displayTime, setDisplayTime] = useState("00:00");
   const [gameOver, setGameOver] = useState(false);
   const [score, setScore] = useState(0);
   const [gameStarted, setGameStarted] = useState(false);
-  const [count, setCount] = useState(1);
+  const [count, setCount] = useState(0);
   const [isAdvice, setIsAdvice] = useState(false);
   const [playLog, setPlayLog] = useState({
     collisionTime: 0,
     lastJumpTime: 0,
+    delta: 0,
+    speed: 0,
   });
 
   dayjs.extend(duration);
@@ -182,6 +186,14 @@ export default function GameWindow({ activeKey }: GameWindow) {
       });
     };
 
+    const drawAdvice = (advice: string) => {
+      if (!ctx) return;
+
+      ctx.fillStyle = "#FF4500"; // 눈에 잘 띄는 색
+      ctx.font = "16px 'Bitcount'";
+      ctx.fillText(advice, 20, 60); // x, y 위치 조정
+    };
+
     // 난이도 증가
     if (frameCount % 500 === 0) {
       obstacleSpeed += 0.5;
@@ -199,8 +211,8 @@ export default function GameWindow({ activeKey }: GameWindow) {
           setPlayLog((prev) => ({
             ...prev,
             collisionTime: Date.now(),
+            delta: prev.lastJumpTime - Date.now(),
             speed: obstacleSpeed,
-            reason: "", // TODO: 게임 오버 이유, 실험을 통해 허용범위 구한 후 늦은/빠른/없는 점프인지 구해야함
           }));
 
           return true;
@@ -211,7 +223,7 @@ export default function GameWindow({ activeKey }: GameWindow) {
     };
 
     // 게임 루프
-    const gameLoop = () => {
+    const gameLoop = async () => {
       if (!canvas || !ctx) return;
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -302,10 +314,7 @@ export default function GameWindow({ activeKey }: GameWindow) {
       if (checkCollision()) {
         setGameOver(true);
         setGameStarted(false);
-        setCount(count + 1);
 
-        // TODO: 추후 서버로 로그 보내기
-        console.log("playLog\n", playLog);
         return;
       }
 
@@ -313,6 +322,8 @@ export default function GameWindow({ activeKey }: GameWindow) {
       drawObstacles();
       drawDog();
       drawTime();
+      if (advice) drawAdvice(advice);
+      console.log(advice);
 
       // 점수 표시
       ctx.fillStyle = "#000";
@@ -338,37 +349,41 @@ export default function GameWindow({ activeKey }: GameWindow) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameOver, gameStarted, isMobile, count]);
 
+  useEffect(() => {
+    const runAdvice = async () => {
+      if (count >= 1 && isAdvice) {
+        const reason = { late: 0, early: 0, nothing: 0 };
+        const calcLogs = calculateDeathReasons(dummyLogs);
+
+        for (const log of calcLogs) {
+          if (log.deathReason === "late") reason.late++;
+          else if (log.deathReason === "early") reason.early++;
+          else reason.nothing++;
+        }
+
+        const content = `
+              아래는 최근 5게임 플레이의 요약 데이터야
+              - 게임 오버 이유:
+                  늦은 점프: ${reason.late}회
+                  빠른 점프: ${reason.early}회
+                  점프 안함: ${reason.nothing}회
+              이 데이터를 바탕으로 유저에게 전달할 코칭을 한 문장으로 간단한 영어문장으로 부탁해. 
+              35자 미만으로 해줘.`;
+
+        await generateAdvice(content);
+      }
+    };
+
+    runAdvice();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [count, isAdvice]);
+
   const startGame = async () => {
-    // TODO: 서버 로그가 5개인지도 확인 필요
-    console.log("isAdvice", isAdvice);
-    console.log("count", count);
-
-    // if (count >= 5 && isAdvice) {
-    //   // TODO: 테스트 데이터
-    //   const content = `
-    //   아래는 최근 5게임 플레이의 요약 데이터야
-
-    //   - 평균 점프 타이밍 오차: +94ms
-    //   - 게임 오버 이유:
-    //       늦은 점프: 3회
-    //       빠른 점프: 1회
-    //       점프 안함: 1회
-
-    //   이 데이터를 바탕으로 유저에게 전달할 코칭을 35자 미만으로 간단하게 부탁해.
-    //   `;
-
-    //   await generateAdvice(content);
-    // }
-
+    setCount((prev) => prev + 1);
     setGameStarted(true);
     setGameOver(false);
     setScore(0);
   };
-
-  // 로그 확인용
-  useEffect(() => {
-    console.log("playLog updated:", playLog);
-  }, [playLog]);
 
   return (
     <div className={`flex justify-center items-center h-full font-bitcount`}>
