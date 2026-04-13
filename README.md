@@ -1,6 +1,6 @@
 # dog jump 🐾
 
-> 
+<img src="https://github.com/user-attachments/assets/d83cff89-ad4f-4b6f-90fd-c35f49134b0d" alt="Dog Jump Demo" width="500" />
 <main align="center">
     <h3 align="left">귀여운 강아지와 함께하는 점프 게임!</h3> 
 </main>
