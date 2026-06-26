@@ -29,10 +29,13 @@ interface GameWindow {
     left: boolean;
     right: boolean;
     jump: boolean;
+    moveDirection: -1 | 1;
+    obstacleDirection: -1 | 1;
   };
+  resetDirection: () => void;
 }
 
-export default function GameWindow({ activeKey }: GameWindow) {
+export default function GameWindow({ activeKey, resetDirection }: GameWindow) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const secondsRef = useRef(0);
   const keyRef = useRef(activeKey);
@@ -267,12 +270,14 @@ export default function GameWindow({ activeKey }: GameWindow) {
     }
 
     // 방해물 생성
-    const createObstacle = (x = canvas.width) => {
+    const createObstacle = (x?: number) => {
       const width = 30 + Math.random() * (isMobile ? 50 : 30);
       const height = 30 + Math.random() * (isMobile ? 35 : 40);
+      const obstacleX =
+        x ?? (keyRef.current.obstacleDirection === -1 ? canvas.width : -width);
 
       obstacles.push({
-        x,
+        x: obstacleX,
         y: groundY - height,
         width: width,
         height: height,
@@ -283,9 +288,14 @@ export default function GameWindow({ activeKey }: GameWindow) {
     const createObstacleGroup = () => {
       const spacing = isMobile ? 125 : 115;
       const obstacleCount = Math.ceil(Math.random() * maxObstaclesPerSpawn);
+      const obstacleDirection = keyRef.current.obstacleDirection;
 
       for (let i = 0; i < obstacleCount; i++) {
-        createObstacle(canvas.width + i * spacing);
+        createObstacle(
+          obstacleDirection === -1
+            ? canvas.width + i * spacing
+            : -spacing * i,
+        );
       }
     };
 
@@ -338,9 +348,15 @@ export default function GameWindow({ activeKey }: GameWindow) {
     };
 
     const getNearestObstacleDistance = () => {
-      const dogFrontX = dog.x + dog.width;
+      const obstacleDirection = keyRef.current.obstacleDirection;
       const aheadObstacles = obstacles
-        .map((obstacle) => obstacle.x - dogFrontX)
+        .map((obstacle) => {
+          if (obstacleDirection === -1) {
+            return obstacle.x - (dog.x + dog.width);
+          }
+
+          return dog.x - (obstacle.x + obstacle.width);
+        })
         .filter((distance) => distance >= 0);
 
       if (aheadObstacles.length === 0) return null;
@@ -379,12 +395,9 @@ export default function GameWindow({ activeKey }: GameWindow) {
       const keys = keyRef.current;
 
       // 좌우 이동
-      if (keys.left) {
-        dog.velocityX = -moveSpeed;
-        dog.direction = -1;
-      } else if (keys.right) {
-        dog.velocityX = moveSpeed;
-        dog.direction = 1;
+      if (keys.left || keys.right) {
+        dog.velocityX = moveSpeed * keys.moveDirection;
+        dog.direction = keys.moveDirection;
       } else {
         dog.velocityX = 0;
       }
@@ -424,17 +437,17 @@ export default function GameWindow({ activeKey }: GameWindow) {
       if (dog.x < 0) dog.x = 0;
       if (dog.x > canvas.width - dog.width) dog.x = canvas.width - dog.width;
 
-      // 장애물 이동
-      obstacles.forEach((obstacle) => {
-        obstacle.x -= obstacleSpeed;
-      });
-
       // 점수 계산
       obstacles.forEach((obstacle) => {
-        obstacle.x -= obstacleSpeed;
+        obstacle.x += obstacleSpeed * 2 * keys.obstacleDirection;
 
         // 강아지가 장애물을 완전히 지난 경우
-        if (!obstacle.passed && dog.x > obstacle.x + obstacle.width) {
+        const hasPassedObstacle =
+          keys.obstacleDirection === -1
+            ? dog.x > obstacle.x + obstacle.width
+            : dog.x + dog.width < obstacle.x;
+
+        if (!obstacle.passed && hasPassedObstacle) {
           obstacle.passed = true;
           localScore++;
           if (isScoreMilestone(localScore)) {
@@ -446,7 +459,10 @@ export default function GameWindow({ activeKey }: GameWindow) {
 
       // 화면 밖 장애물 제거
       obstacles = obstacles.filter(
-        (obstacle) => obstacle.x + obstacle.width > 0,
+        (obstacle) =>
+          keys.obstacleDirection === -1
+            ? obstacle.x + obstacle.width > 0
+            : obstacle.x < canvas.width,
       );
 
       // 새 장애물 생성
@@ -521,6 +537,7 @@ export default function GameWindow({ activeKey }: GameWindow) {
   }, [gameOver, gameStarted, isMobile]);
 
   const startGame = () => {
+    resetDirection();
     setGameStarted(true);
     setGameOver(false);
     setScore(0);

@@ -1,25 +1,74 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import GameWindow from "./GameWindow";
 import useIsMobile from "../hooks/useIsMobile";
 
+const DOUBLE_PRESS_MS = 300;
+type Direction = -1 | 1;
+type ActiveKeyName = "left" | "right" | "jump";
+
 export default function GameConsole() {
   const isMobile = useIsMobile();
-  const [activeKey, setActiveKey] = useState({
+  const initialActiveKey = {
     left: false,
     right: false,
     jump: false,
+    moveDirection: 1 as Direction,
+    obstacleDirection: -1 as Direction,
+  };
+  const lastDirectionPressRef = useRef<{
+    key: "left" | "right" | null;
+    time: number;
+  }>({
+    key: null,
+    time: 0,
   });
+  const [activeKey, setActiveKey] = useState(initialActiveKey);
+
+  const resetDirection = () => {
+    lastDirectionPressRef.current = { key: null, time: 0 };
+    setActiveKey(initialActiveKey);
+  };
+
+  const pressDirection = useCallback((key: "left" | "right") => {
+    const now = window.performance.now();
+    const lastPress = lastDirectionPressRef.current;
+    const isDoublePress =
+      lastPress.key === key && now - lastPress.time <= DOUBLE_PRESS_MS;
+
+    lastDirectionPressRef.current = { key, time: now };
+
+    setActiveKey((prev) => {
+      const moveDirection = key === "left" ? -1 : 1;
+
+      return {
+        ...prev,
+        [key]: true,
+        moveDirection,
+        obstacleDirection: isDoublePress
+          ? ((-moveDirection) as Direction)
+          : prev.obstacleDirection,
+      };
+    });
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.repeat) return;
+
+      if (e.key === "ArrowLeft") {
+        pressDirection("left");
+        return;
+      }
+
+      if (e.key === "ArrowRight") {
+        pressDirection("right");
+        return;
+      }
+
       setActiveKey((prev) => {
         switch (e.key) {
-          case "ArrowLeft":
-            return { ...prev, left: true };
-          case "ArrowRight":
-            return { ...prev, right: true };
           case " ":
           case "Space":
             return { ...prev, jump: true };
@@ -52,14 +101,26 @@ export default function GameConsole() {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, []);
+  }, [pressDirection]);
 
-  const handleDown = (e: React.TouchEvent | React.MouseEvent, key: string) => {
+  const handleDown = (
+    e: React.TouchEvent | React.MouseEvent,
+    key: ActiveKeyName,
+  ) => {
     e.preventDefault();
+
+    if (key === "left" || key === "right") {
+      pressDirection(key);
+      return;
+    }
+
     setActiveKey((prev) => ({ ...prev, [key]: true }));
   };
 
-  const handleUp = (e: React.TouchEvent | React.MouseEvent, key: string) => {
+  const handleUp = (
+    e: React.TouchEvent | React.MouseEvent,
+    key: ActiveKeyName,
+  ) => {
     e.preventDefault();
     setActiveKey((prev) => ({ ...prev, [key]: false }));
   };
@@ -106,7 +167,7 @@ export default function GameConsole() {
         <div className="absolute max-sm:top-39 top-53 text-2xl">...</div>
 
         <div className="max-sm:w-[257px] max-sm:h-[292px] w-[417px] h-[285px] rounded-md relative overflow-hidden border-[#dbd97992] border-8">
-          <GameWindow activeKey={activeKey} />
+          <GameWindow activeKey={activeKey} resetDirection={resetDirection} />
         </div>
       </div>
 
