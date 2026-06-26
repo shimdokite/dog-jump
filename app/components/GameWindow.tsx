@@ -61,11 +61,14 @@ export default function GameWindow({ activeKey }: GameWindow) {
     const jumpStrength = -12;
     const moveSpeed = 5;
     const groundY = 220;
+    const scorePulseDurationFrames = 48;
 
     let obstacles: Obstacle[] = [];
     let obstacleSpeed = 3;
+    let maxObstaclesPerSpawn = 1;
     let frameCount = 0;
     let localScore = 0;
+    let scorePulseStartFrame = -Infinity;
     let animationId = 0;
 
     // 강아지
@@ -90,7 +93,7 @@ export default function GameWindow({ activeKey }: GameWindow) {
         -dog.width / 2,
         -dog.height / 2,
         dog.width,
-        dog.height
+        dog.height,
       );
 
       ctx.restore();
@@ -127,12 +130,12 @@ export default function GameWindow({ activeKey }: GameWindow) {
     }
 
     // 방해물 생성
-    const createObstacle = () => {
+    const createObstacle = (x = canvas.width) => {
       const width = 30 + Math.random() * (isMobile ? 50 : 30);
       const height = 30 + Math.random() * (isMobile ? 35 : 40);
 
       obstacles.push({
-        x: canvas.width,
+        x,
         y: groundY - height,
         width: width,
         height: height,
@@ -140,8 +143,17 @@ export default function GameWindow({ activeKey }: GameWindow) {
       });
     };
 
+    const createObstacleGroup = () => {
+      const spacing = isMobile ? 125 : 115;
+      const obstacleCount = Math.ceil(Math.random() * maxObstaclesPerSpawn);
+
+      for (let i = 0; i < obstacleCount; i++) {
+        createObstacle(canvas.width + i * spacing);
+      }
+    };
+
     // 초기 장애물 생성
-    createObstacle();
+    createObstacleGroup();
 
     const drawObstacles = () => {
       ctx.fillStyle = "#8B4513";
@@ -160,14 +172,14 @@ export default function GameWindow({ activeKey }: GameWindow) {
         ctx.moveTo(obstacle.x + obstacle.width / 2, obstacle.y);
         ctx.lineTo(
           obstacle.x + obstacle.width / 2,
-          obstacle.y + obstacle.height
+          obstacle.y + obstacle.height,
         );
         ctx.stroke();
         ctx.beginPath();
         ctx.moveTo(obstacle.x, obstacle.y + obstacle.height / 2);
         ctx.lineTo(
           obstacle.x + obstacle.width,
-          obstacle.y + obstacle.height / 2
+          obstacle.y + obstacle.height / 2,
         );
         ctx.stroke();
       });
@@ -186,6 +198,15 @@ export default function GameWindow({ activeKey }: GameWindow) {
         }
       }
       return false;
+    };
+
+    const isScoreMilestone = (currentScore: number) => {
+      return (
+        currentScore === 10 ||
+        currentScore === 50 ||
+        currentScore === 100 ||
+        (currentScore >= 500 && currentScore % 500 === 0)
+      );
     };
 
     // 게임 루프
@@ -256,24 +277,32 @@ export default function GameWindow({ activeKey }: GameWindow) {
         if (!obstacle.passed && dog.x > obstacle.x + obstacle.width) {
           obstacle.passed = true;
           localScore++;
+          if (isScoreMilestone(localScore)) {
+            scorePulseStartFrame = frameCount;
+          }
           setScore(localScore);
         }
       });
 
       // 화면 밖 장애물 제거
       obstacles = obstacles.filter(
-        (obstacle) => obstacle.x + obstacle.width > 0
+        (obstacle) => obstacle.x + obstacle.width > 0,
       );
 
       // 새 장애물 생성
       frameCount++;
       if (frameCount % 100 === 0) {
-        createObstacle();
+        createObstacleGroup();
       }
 
       // 난이도 증가
       if (frameCount % 500 === 0) {
         obstacleSpeed += 0.5;
+      }
+
+      // 시간이 지나면 한 번에 나오는 장애물 수를 1~2개로 랜덤 생성
+      if (frameCount % 1000 === 0 && maxObstaclesPerSpawn < 2) {
+        maxObstaclesPerSpawn++;
       }
 
       // 충돌 체크
@@ -289,15 +318,20 @@ export default function GameWindow({ activeKey }: GameWindow) {
       drawTime();
 
       // 점수 표시
-      ctx.fillStyle = "#000";
-      ctx.font = `18px 'Bitcount'`;
+      const scorePulseFrame = frameCount - scorePulseStartFrame;
+      const isScorePulsing =
+        scorePulseFrame >= 0 && scorePulseFrame <= scorePulseDurationFrames;
+      const scorePulseSize = isScorePulsing
+        ? 18 +
+          Math.sin((scorePulseFrame / scorePulseDurationFrames) * Math.PI) * 6
+        : 18;
 
-      const scoreLength = `${localScore}`.length;
-      let area = 375;
+      ctx.font = `${scorePulseSize}px 'Bitcount'`;
+      ctx.fillStyle = isScorePulsing ? "#FFD83D" : "#000";
+      ctx.textAlign = "right";
 
-      if (scoreLength > 3) area -= (scoreLength - 3) * 10;
-
-      ctx.fillText(`${localScore}`, area, 30);
+      ctx.fillText(`${localScore}`, canvas.width - 20, 30);
+      ctx.textAlign = "left";
 
       animationId = requestAnimationFrame(gameLoop);
     };
@@ -317,8 +351,8 @@ export default function GameWindow({ activeKey }: GameWindow) {
   };
 
   return (
-    <div className={`flex justify-center items-center h-full font-bitcount`}>
-      <div className="max-sm:w-[257px] w-[410px] h-full absolute top-[0.2px] mx-3">
+    <div className="relative flex h-full w-full items-center justify-center font-bitcount">
+      <div className="absolute inset-0 z-10 h-full w-full">
         {!gameStarted && !gameOver && <GameStart start={startGame} />}
         {gameOver && (
           <GameOver
@@ -334,7 +368,7 @@ export default function GameWindow({ activeKey }: GameWindow) {
         ref={canvasRef}
         width={408}
         height={284}
-        className="rounded-sm my-1 w-full max-w-[408px] max-sm:h-[292px]"
+        className="block h-full w-full"
       />
     </div>
   );

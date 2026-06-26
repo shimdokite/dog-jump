@@ -65,7 +65,7 @@ export default function GameConsole() {
   };
 
   return (
-    <div className="max-sm:w-[357px] max-sm:h-[457px] w-[744px] h-[376px] bg-[#D9D9D9] flex max-sm:flex-col max-sm:justify-center justify-between items-center rounded-lg shadow-[inset_0_5px_10px_#95959555]">
+    <div className="max-sm:w-[357px] max-sm:h-[457px] w-[744px] h-[376px] bg-[#D9D9D9] flex max-sm:flex-col max-sm:justify-center justify-between items-center rounded-lg shadow-[0_18px_26px_#00000016,inset_0_10px_0_#D9D9D9,inset_0_-6px_0_#BFBFBF]">
       {!isMobile && (
         <div className="w-1/3 flex justify-center items-center gap-6">
           <button
@@ -105,7 +105,7 @@ export default function GameConsole() {
       <div className="flex flex-col justify-center items-center">
         <div className="absolute max-sm:top-39 top-53 text-2xl">...</div>
 
-        <div className="max-sm:w-[257px] max-sm:h-[292px] w-[417px] h-[285px] rounded-md relative">
+        <div className="max-sm:w-[257px] max-sm:h-[292px] w-[417px] h-[285px] rounded-md relative overflow-hidden border-[#dbd97992] border-8">
           <GameWindow activeKey={activeKey} />
         </div>
       </div>
