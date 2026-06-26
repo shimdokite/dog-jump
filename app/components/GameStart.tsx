@@ -12,7 +12,7 @@ export default function GameStart({ start }: GameStart) {
   }, []);
 
   return (
-    <div className="w-full h-full flex flex-col justify-center items-center gap-5 text-white bg-[#A0C39C] rounded-md">
+    <div className="w-full h-full flex flex-col justify-center items-center gap-5 text-white bg-[#A0C39C]">
       <button
         ref={ref}
         type="button"

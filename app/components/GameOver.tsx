@@ -24,7 +24,7 @@ export default function GameOver({ time, score, gameOver, start }: GameOver) {
   }, [gameOver]);
 
   return (
-    <div className="w-full h-full flex flex-col justify-center items-center gap-5 text-white bg-[#42464830] rounded-md">
+    <div className="w-full h-full flex flex-col justify-center items-center gap-5 text-white bg-[#42464830]">
       <h1 className="text-center text-3xl">Game Over!</h1>
 
       <div className="flex flex-col justify-center items-center text-xl">
