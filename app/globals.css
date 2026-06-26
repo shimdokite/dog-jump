@@ -26,8 +26,17 @@
   src: url("/fonts/BitcountGridSingle.ttf") format("truetype");
 }
 
+@font-face {
+  font-family: "Galmuri";
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url("/fonts/Galmuri11.woff2") format("woff2");
+}
+
 @theme {
   --font-bitcount: "Bitcount";
+  --font-galmuri: "Galmuri";
 }
 
 body {

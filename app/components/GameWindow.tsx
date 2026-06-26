@@ -1,9 +1,20 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
 import GameStart from "./GameStart";
 import GameOver from "./GameOver";
 import useIsMobile from "../hooks/useIsMobile";
+import {
+  buildCoachingSummary,
+  buildRunSummary,
+  classifyJumpTiming,
+  getAutoCoachingEnabled,
+  getRunSummaries,
+  getSessionRunCount,
+  saveRunSummary,
+  type FailureEvent,
+  type JumpEvent,
+} from "../lib/gameAnalytics";
 
 interface Obstacle {
   x: number;
@@ -25,17 +36,141 @@ export default function GameWindow({ activeKey }: GameWindow) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const secondsRef = useRef(0);
   const keyRef = useRef(activeKey);
+  const scoreRef = useRef(0);
   const isMobile = useIsMobile();
   const [displayTime, setDisplayTime] = useState("00:00");
   const [gameOver, setGameOver] = useState(false);
   const [score, setScore] = useState(0);
   const [gameStarted, setGameStarted] = useState(false);
+  const [coachMessage, setCoachMessage] = useState("");
+  const [showCoachMessage, setShowCoachMessage] = useState(false);
+  const [coachLeaving, setCoachLeaving] = useState(false);
+  const previousScoreForCoachingRef = useRef<number | null>(null);
+  const coachHideTimerRef = useRef(0);
+  const coachExitTimerRef = useRef(0);
 
   dayjs.extend(duration);
 
   useEffect(() => {
     keyRef.current = activeKey;
   }, [activeKey]);
+
+  useEffect(() => {
+    scoreRef.current = score;
+  }, [score]);
+
+  const dismissCoachMessage = useCallback((duration = 700) => {
+    if (coachHideTimerRef.current) clearTimeout(coachHideTimerRef.current);
+    if (coachExitTimerRef.current) clearTimeout(coachExitTimerRef.current);
+
+    setCoachLeaving(true);
+    coachExitTimerRef.current = window.setTimeout(() => {
+      setShowCoachMessage(false);
+      setCoachLeaving(false);
+      setCoachMessage("");
+    }, duration);
+  }, []);
+
+  useEffect(() => {
+    if (!gameStarted || gameOver) return;
+
+    const runs = getRunSummaries();
+    if (
+      !getAutoCoachingEnabled() ||
+      runs.length === 0 ||
+      getSessionRunCount() === 0
+    ) {
+      setCoachMessage("");
+      setShowCoachMessage(false);
+      setCoachLeaving(false);
+      previousScoreForCoachingRef.current = null;
+      return;
+    }
+
+    const controller = new AbortController();
+    previousScoreForCoachingRef.current = runs[0].score;
+
+    const requestCoaching = async () => {
+      setCoachMessage("coaching...");
+      setShowCoachMessage(true);
+      setCoachLeaving(false);
+
+      try {
+        const response = await fetch("/api/coach", {
+          method: "POST",
+          signal: controller.signal,
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            summary: buildCoachingSummary(runs),
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error ?? "코칭을 불러오지 못했어요.");
+        }
+
+        if (previousScoreForCoachingRef.current !== null) {
+          const hasAlreadyPassedPreviousScore =
+            scoreRef.current > previousScoreForCoachingRef.current;
+
+          if (hasAlreadyPassedPreviousScore) {
+            dismissCoachMessage();
+            return;
+          }
+        }
+
+        setCoachMessage(data.coaching);
+        coachHideTimerRef.current = window.setTimeout(() => {
+          dismissCoachMessage();
+        }, 30000);
+      } catch (error) {
+        if (controller.signal.aborted) return;
+
+        setCoachMessage(
+          error instanceof Error ? error.message : "코칭을 불러오지 못했어요.",
+        );
+        coachHideTimerRef.current = window.setTimeout(() => {
+          dismissCoachMessage();
+        }, 5000);
+      }
+    };
+
+    requestCoaching();
+
+    return () => {
+      controller.abort();
+      if (coachHideTimerRef.current) clearTimeout(coachHideTimerRef.current);
+      if (coachExitTimerRef.current) clearTimeout(coachExitTimerRef.current);
+    };
+  }, [dismissCoachMessage, gameOver, gameStarted]);
+
+  useEffect(() => {
+    const previousScore = previousScoreForCoachingRef.current;
+
+    if (
+      !gameStarted ||
+      gameOver ||
+      !showCoachMessage ||
+      coachLeaving ||
+      previousScore === null ||
+      score <= previousScore
+    ) {
+      return;
+    }
+
+    dismissCoachMessage();
+  }, [
+    coachLeaving,
+    dismissCoachMessage,
+    gameOver,
+    gameStarted,
+    score,
+    showCoachMessage,
+  ]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -70,6 +205,8 @@ export default function GameWindow({ activeKey }: GameWindow) {
     let localScore = 0;
     let scorePulseStartFrame = -Infinity;
     let animationId = 0;
+    let lastJumpPressed = false;
+    const jumpEvents: JumpEvent[] = [];
 
     // 강아지
     const frames: HTMLImageElement[] = [];
@@ -200,6 +337,16 @@ export default function GameWindow({ activeKey }: GameWindow) {
       return false;
     };
 
+    const getNearestObstacleDistance = () => {
+      const dogFrontX = dog.x + dog.width;
+      const aheadObstacles = obstacles
+        .map((obstacle) => obstacle.x - dogFrontX)
+        .filter((distance) => distance >= 0);
+
+      if (aheadObstacles.length === 0) return null;
+      return Math.round(Math.min(...aheadObstacles));
+    };
+
     const isScoreMilestone = (currentScore: number) => {
       return (
         currentScore === 10 ||
@@ -244,9 +391,22 @@ export default function GameWindow({ activeKey }: GameWindow) {
 
       // 점프
       if (keys.jump && !dog.isJumping) {
+        const obstacleDistance = getNearestObstacleDistance();
+
+        if (!lastJumpPressed) {
+          jumpEvents.push({
+            t: secondsRef.current,
+            obstacleDistance,
+            timing: classifyJumpTiming(obstacleDistance),
+            dogX: Math.round(dog.x),
+            dogY: Math.round(dog.y),
+          });
+        }
+
         dog.velocityY = jumpStrength;
         dog.isJumping = true;
       }
+      lastJumpPressed = keys.jump;
 
       // 중력 적용
       dog.velocityY += gravity;
@@ -307,6 +467,22 @@ export default function GameWindow({ activeKey }: GameWindow) {
 
       // 충돌 체크
       if (checkCollision()) {
+        const failure: FailureEvent = {
+          t: secondsRef.current,
+          dogX: Math.round(dog.x),
+          dogY: Math.round(dog.y),
+          obstacleDistance: getNearestObstacleDistance(),
+          reason: "hit_obstacle",
+        };
+
+        saveRunSummary(
+          buildRunSummary({
+            score: localScore,
+            survivalTimeSeconds: secondsRef.current,
+            jumpEvents,
+            failure,
+          }),
+        );
         setGameOver(true);
         setGameStarted(false);
         return;
@@ -363,6 +539,23 @@ export default function GameWindow({ activeKey }: GameWindow) {
           />
         )}
       </div>
+
+      {gameStarted && !gameOver && showCoachMessage && (
+        <div
+          className={`pointer-events-none absolute left-1/2 top-3 z-20 max-h-8 w-[62%] -translate-x-1/2 overflow-hidden rounded px-2 py-2 text-center font-galmuri text-[12px] leading-3 text-[#f06400] transition-all duration-700 ease-out ${
+            coachLeaving
+              ? "-translate-y-3 scale-95 opacity-0"
+              : "translate-y-0 scale-100 opacity-100"
+          }`}
+          style={{
+            display: "-webkit-box",
+            WebkitBoxOrient: "vertical",
+            WebkitLineClamp: 2,
+          }}
+        >
+          {coachMessage}
+        </div>
+      )}
 
       <canvas
         ref={canvasRef}
