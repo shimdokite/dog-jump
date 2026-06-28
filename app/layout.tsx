@@ -13,8 +13,28 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "dog jump",
-  description: "dog jump game",
+  title: {
+    default: "Dog Jump",
+    template: "%s | Dog Jump",
+  },
+  description:
+    "A tiny pixel dog jumping game with quick runs, score chasing, and playful coaching.",
+  applicationName: "Dog Jump",
+  icons: {
+    icon: "/favicon.ico",
+  },
+  openGraph: {
+    title: "Dog Jump",
+    description:
+      "A tiny pixel dog jumping game with quick runs, score chasing, and playful coaching.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Dog Jump",
+    description:
+      "A tiny pixel dog jumping game with quick runs, score chasing, and playful coaching.",
+  },
 };
 
 export default function RootLayout({
